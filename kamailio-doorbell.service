@@ -1,0 +1,21 @@
+[Unit]
+Description=Kamailio Doorbell Service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/kamailio-doorbell
+WorkingDirectory=/tmp
+Restart=always
+RestartSec=5
+User=nobody
+Group=nogroup
+
+# Ensure the environment is set up correctly
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+
+# Optional logging
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
