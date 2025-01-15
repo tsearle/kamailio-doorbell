@@ -8,6 +8,7 @@ import (
 
 type RtpServer struct {
 	conn         *net.UDPConn
+	dest         *net.UDPAddr
 	shutdown     bool
 	writeHandler func([]byte)
 	name         string
@@ -23,12 +24,20 @@ func (r *RtpServer) Run() {
 				fmt.Println("Failed to set read deadline:", err)
 				continue
 			}
-			n, _, err := r.conn.ReadFromUDP(buf)
+			n, dest, err := r.conn.ReadFromUDP(buf)
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 				continue
 			}
 			if err != nil {
 				fmt.Printf("Error reading from UDP: %v\n", err)
+				continue
+			}
+
+			if r.dest == nil {
+				r.dest = dest
+			} else if r.dest.String() != dest.String() {
+				fmt.Printf("Received packet from unexpected source %s\n", dest.String())
+				continue
 			}
 
 			if r.writeHandler != nil {
@@ -41,7 +50,7 @@ func (r *RtpServer) Run() {
 
 func (r *RtpServer) Close() {
 	r.shutdown = true
-	r.conn.Close()
+	_ = r.conn.Close()
 }
 
 func (r *RtpServer) GetPort() int {
@@ -53,7 +62,10 @@ func (r *RtpServer) SetWriteHandler(handler func([]byte)) {
 }
 
 func (r *RtpServer) Write(data []byte) (int, error) {
-	return r.conn.Write(data)
+	if r.dest != nil {
+		return r.conn.WriteToUDP(data, r.dest)
+	}
+	return 0, nil
 }
 
 func NewRtpServer(name string) (*RtpServer, error) {
