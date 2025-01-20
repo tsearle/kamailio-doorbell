@@ -77,7 +77,13 @@ func (ss *SipServer) HandleRegister(req *sip.Request, tx sip.ServerTransaction) 
 
 	ss.regMap[req.From().Address.User] = *newAddress
 
-	_ = tx.Respond(sip.NewResponseFromRequest(req, 200, "OK", nil))
+	// Create a 200 OK response
+	response := sip.NewResponseFromRequest(req, 200, "OK", nil)
+
+	// Set the Expires header on the response
+	response.AppendHeader(sip.NewHeader("Expires", "60"))
+
+	_ = tx.Respond(response)
 }
 
 func (ss *SipServer) SendInvite(toUser string, correlationToken string, origSDP sdp.SessionDescription) (*SipCall, error) {
